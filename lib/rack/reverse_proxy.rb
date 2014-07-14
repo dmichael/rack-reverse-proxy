@@ -26,8 +26,17 @@ module Rack
       headers['HOST'] = uri.host if all_opts[:preserve_host]
       headers['X-Forwarded-Host'] = rackreq.host if all_opts[:x_forwarded_host]
 
+
       session = Net::HTTP.new(uri.host, uri.port)
       session.read_timeout=all_opts[:timeout] if all_opts[:timeout]
+
+      proxy = all_opts[:proxy]
+      session = if proxy
+        proxy_uri = URI(proxy)
+        Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port, proxy_uri.user, proxy_uri.password)
+      else
+        Net::HTTP.new(uri.host, uri.port)
+      end
 
       session.use_ssl = (uri.scheme == 'https')
       if uri.scheme == 'https' && all_opts[:verify_ssl]
@@ -36,7 +45,11 @@ module Rack
         # DO NOT DO THIS IN PRODUCTION !!!
         session.verify_mode = OpenSSL::SSL::VERIFY_NONE
       end
+
+
+
       session.start { |http|
+
         m = rackreq.request_method
         case m
         when "GET", "HEAD", "DELETE", "OPTIONS", "TRACE"
